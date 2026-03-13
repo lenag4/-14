@@ -1,170 +1,178 @@
 <template>
-  <div class="app">
-    <header>
-      <h1>Менеджер книг</h1>
-      <p>Управляй своей библиотекой</p>
-    </header>
+  <div class="container mt-5">
+    <h1 class="text-center mb-4">Моя коллекция книг</h1>
 
-    <main>
-      <AddBookForm @add-book="addBook" />
-      
-      <BookFilters 
-        v-model:searchQuery="searchQuery"
-        v-model:filter="currentFilter"
-        :books="books"
-      />
-      
-      <div v-if="filteredBooks.length === 0" class="empty-state">
-        <p>Книги не найдены :(</p>
-        <p>Добавьте первую книгу или измените параметры поиска</p>
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="alert alert-info">
+          Всего книг: <strong>{{ books.length }}</strong>
+        </div>
       </div>
-      
-      <div v-else class="books-list">
-        <BookCard
-          v-for="book in filteredBooks"
-          :key="book.id"
-          :book="book"
-          @toggle="toggleBook(book.id)"
-          @delete="deleteBook(book.id)"
-          @rate="rateBook(book.id, $event)"
-        />
+      <div class="col-md-6">
+        <div class="d-flex justify-content-end">
+          <select v-model="sortOrder" class="form-select w-auto">
+            <option value="default">По умолчанию</option>
+            <option value="asc">По названию (А-Я)</option>
+            <option value="desc">По названию (Я-А)</option>
+          </select>
+        </div>
       </div>
-    </main>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <form @submit.prevent="addBook" class="mb-4 p-4 border rounded bg-light">
+          <h5 class="mb-3">Добавить новую книгу</h5>
+
+          <div class="mb-3">
+            <label class="form-label">Название книги</label>
+            <input 
+              v-model="newBook.title" 
+              type="text" 
+              class="form-control" 
+              placeholder="Введите название"
+              required
+            >
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Описание</label>
+            <textarea
+              v-model="newBook.description"
+              class="form-control"
+              rows="3"
+              placeholder="Введите описание книги"
+            ></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Фото книги</label>
+            <input
+              type="file"
+              class="form-control"
+              accept="image/*"
+              @change="handleFileUpload"
+              ref="fileInput"
+            >
+            <small class="text-muted">Поддерживаются форматы: JPG, PNG, GIF</small>
+          </div>
+
+          <button class="btn btn-primary" type="submit">Добавить книгу</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="row">
+      <div 
+        v-for="book in sortedBooks" 
+        :key="book.id" 
+        class="col-md-4 mb-3"
+      >
+        <div class="card h-100">
+          <div v-if="book.photo" class="card-img-top-wrapper" style="height: 500px; overflow: hidden;">
+            <img
+              :src="book.photo"
+              class="card-img-top"
+              :alt="book.title"
+              style="width: 100%; height: 100%; object-fit: cover;"
+            >
+          </div>
+          <div v-else class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+            <span class="text-muted">Нет фото</span>
+          </div>
+
+          <div class="card-body">
+            <h5 class="card-title">{{ book.title }}</h5>
+            <p class="card-text">{{ book.description || 'Нет описания' }}</p>
+          </div>
+          <div class="card-footer">
+            <button 
+              @click="removeBook(book.id)" 
+              class="btn btn-sm btn-danger"
+            >
+              Удалить
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="books.length === 0" class="text-center py-5">
+      <p class="text-muted">Коллекция пуста. Добавьте первую книгу!</p>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import AddBookForm from './components/AddBookForm.vue'
-import BookFilters from './components/BookFilters.vue'
-import BookCard from './components/BookCard.vue'
+import { ref, computed } from 'vue'
 
-// Состояние книг с загрузкой из localStorage
 const books = ref([])
+const sortOrder = ref('default')
+const fileInput = ref(null)
 
-// Загрузка сохраненных книг
-const savedBooks = localStorage.getItem('books')
-if (savedBooks) {
-  books.value = JSON.parse(savedBooks)
-}
-
-// Состояния фильтрации
-const currentFilter = ref('all')
-const searchQuery = ref('')
-
-// Сохранение изменений
-watch(books, (newBooks) => {
-  localStorage.setItem('books', JSON.stringify(newBooks))
-}, { deep: true })
-
-// Добавление книги
-const addBook = (bookData) => {
-  const newBook = {
-    id: Date.now(),
-    ...bookData,
-    completed: false,
-    rating: 0
-  }
-  books.value.push(newBook)
-}
-
-// Переключение статуса
-const toggleBook = (id) => {
-  const book = books.value.find(b => b.id === id)
-  if (book) {
-    book.completed = !book.completed
-    if (!book.completed) {
-      book.rating = 0
-    }
-  }
-}
-
-// Оценка книги
-const rateBook = (id, rating) => {
-  const book = books.value.find(b => b.id === id)
-  if (book && book.completed) {
-    book.rating = rating
-  }
-}
-
-// Удаление книги
-const deleteBook = (id) => {
-  if (confirm('Удалить книгу?')) {
-    books.value = books.value.filter(b => b.id !== id)
-  }
-}
-
-// Фильтрация и поиск книг
-const filteredBooks = computed(() => {
-  return books.value
-    .filter(book => {
-      if (currentFilter.value === 'unread') return !book.completed
-      if (currentFilter.value === 'read') return book.completed
-      return true
-    })
-    .filter(book => {
-      if (!searchQuery.value) return true
-      const query = searchQuery.value.toLowerCase()
-      return book.title.toLowerCase().includes(query) ||
-             book.author.toLowerCase().includes(query)
-    })
+const newBook = ref({
+  title: '',
+  description: '',
+  photo: null
 })
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Файл слишком большой. Максимальный размер 5MB')
+      clearImage()
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      alert('Пожалуйста, выберите изображение')
+      clearImage()
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      newBook.value.photo = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const clearImage = () => {
+  newBook.value.photo = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+}
+
+const sortedBooks = computed(() => {
+  let sorted = [...books.value]
+  if (sortOrder.value === 'asc') {
+    sorted.sort((a, b) => a.title.localeCompare(b.title))
+  } else if (sortOrder.value === 'desc') {
+    sorted.sort((a, b) => b.title.localeCompare(a.title))
+  }
+  return sorted
+})
+
+const addBook = () => {
+  if (!newBook.value.title.trim()) return
+  books.value.push({
+    id: Date.now(),
+    title: newBook.value.title,
+    description: newBook.value.description || null,
+    photo: newBook.value.photo
+  })
+  
+  newBook.value = {
+    title: '',
+    description: '',
+    photo: null
+  }
+  clearImage()
+}
+
+const removeBook = (id) => {
+  books.value = books.value.filter(book => book.id !== id)
+}
 </script>
-
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f0f2f5;
-  line-height: 1.6;
-}
-
-.app {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-header {
-  text-align: center;
-  margin-bottom: 30px;
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-header h1 {
-  font-size: 2.5em;
-  margin-bottom: 5px;
-}
-
-main {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px;
-  color: #999;
-  font-size: 1.2em;
-}
-
-.empty-state p:first-child {
-  font-size: 3em;
-  margin-bottom: 20px;
-}
-
-.books-list {
-  margin-top: 20px;
-}
-</style>

@@ -3,5 +3,5 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
-  base: '/-14/' // тут название репозитория
+  base: '/-15/' // тут название репозитория
 })

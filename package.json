@@ -2,7 +2,7 @@
   "name": "book-manager",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://lenag4.github.io/-14/",
+  "homepage": "https://lenag4.github.io/-15/",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "bootstrap": "^5.3.8",
     "vue": "^3.5.25"
   },
   "devDependencies": {
